@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db import IntegrityError
 
 # Create your views here.
 from rest_framework import status, generics, permissions
@@ -23,13 +24,42 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            return Response({
-                'message': 'User registered successfully',
-                'user_id': user.id,
-                'user_type': user.user_type
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = serializer.save()
+                return Response({
+                    'message': 'User registered successfully',
+                    'user_id': user.id,
+                    'user_type': user.user_type
+                }, status=status.HTTP_201_CREATED)
+            except IntegrityError as e:
+                # Handle unique constraint violations
+                error_msg = str(e)
+                if 'phone' in error_msg:
+                    return Response({
+                        'message': 'Registration failed',
+                        'errors': {'phone': 'This phone number is already registered. Please use a different phone number.'}
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                elif 'email' in error_msg or 'username' in error_msg:
+                    return Response({
+                        'message': 'Registration failed',
+                        'errors': {'detail': 'This email or username is already registered. Please use a different email/username.'}
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({
+                        'message': 'Registration failed - duplicate entry',
+                        'errors': {'detail': 'This information is already registered.'}
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({
+                    'message': f'Registration error: {str(e)}',
+                    'errors': {'detail': str(e)}
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Return detailed error messages
+        return Response({
+            'message': 'Registration failed',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(TokenObtainPairView):
     serializer_class = UserLoginSerializer

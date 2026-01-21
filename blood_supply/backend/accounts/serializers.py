@@ -7,6 +7,13 @@ from .models import User, DonorHealthInfo
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
+    first_name = serializers.CharField(required=True, allow_blank=False)
+    last_name = serializers.CharField(required=True, allow_blank=False)
+    phone = serializers.CharField(required=True, allow_blank=False)
+    address = serializers.CharField(required=True, allow_blank=False)
+    city = serializers.CharField(required=True, allow_blank=False)
+    state = serializers.CharField(required=True, allow_blank=False)
+    pincode = serializers.CharField(required=True, allow_blank=False)
     
     class Meta:
         model = User
@@ -20,28 +27,36 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
+        if attrs.get('password') != attrs.get('password2'):
             raise serializers.ValidationError({"password": "Password fields don't match."})
         
         user_type = attrs.get('user_type')
         
         if user_type == 'HOSPITAL':
-            if not attrs.get('hospital_name'):
+            if not attrs.get('hospital_name') or attrs.get('hospital_name', '').strip() == '':
                 raise serializers.ValidationError({"hospital_name": "Hospital name is required for hospitals."})
         
         elif user_type == 'BLOOD_BANK':
-            if not attrs.get('blood_bank_name'):
+            if not attrs.get('blood_bank_name') or attrs.get('blood_bank_name', '').strip() == '':
                 raise serializers.ValidationError({"blood_bank_name": "Blood bank name is required for blood banks."})
         
         elif user_type == 'DONOR':
-            if not attrs.get('blood_group'):
+            if not attrs.get('blood_group') or attrs.get('blood_group', '').strip() == '':
                 raise serializers.ValidationError({"blood_group": "Blood group is required for donors."})
+            if not attrs.get('date_of_birth'):
+                raise serializers.ValidationError({"date_of_birth": "Date of birth is required for donors."})
         
         return attrs
     
     def create(self, validated_data):
         validated_data.pop('password2')
         password = validated_data.pop('password')
+        
+        # Set default values for optional fields if not provided
+        if not validated_data.get('latitude'):
+            validated_data['latitude'] = None
+        if not validated_data.get('longitude'):
+            validated_data['longitude'] = None
         
         user = User.objects.create(**validated_data)
         user.set_password(password)
