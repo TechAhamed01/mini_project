@@ -30,6 +30,7 @@ import {
   LocalHospital as HospitalIcon,
   Bloodtype as BloodIcon,
   Favorite as DonorIcon,
+  History as HistoryIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;

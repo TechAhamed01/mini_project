@@ -13,8 +13,17 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
+    console.log('🔐 API Request Interceptor:', {
+      url: config.url,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      allLocalStorageKeys: Object.keys(localStorage)
+    });
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Token added to request header');
+    } else {
+      console.warn('⚠️ No token found in localStorage for URL:', config.url);
     }
     return config;
   },
@@ -63,6 +72,7 @@ export const authAPI = {
   logout: () => api.post('/accounts/logout/'),
   profile: () => api.get('/accounts/profile/'),
   dashboard: () => api.get('/accounts/dashboard/'),
+  healthInfo: () => api.get('/accounts/health-info/'),
 };
 
 export const inventoryAPI = {

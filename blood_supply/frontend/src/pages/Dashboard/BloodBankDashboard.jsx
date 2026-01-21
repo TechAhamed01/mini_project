@@ -35,7 +35,7 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { inventoryAPI, notificationAPI } from '../../services/api';
+import { authAPI, inventoryAPI, notificationAPI } from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -50,10 +50,13 @@ const BloodBankDashboard = () => {
     blood_group: '',
     component_type: 'WHOLE_BLOOD',
     quantity: 1,
+    unit_volume: 450,
     collection_date: new Date().toISOString().split('T')[0],
+    expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     storage_temperature: 4,
     storage_location: '',
     donor: '',
+    status: 'AVAILABLE',
   });
 
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -110,6 +113,12 @@ const BloodBankDashboard = () => {
 
   const handleAddInventory = async () => {
     try {
+      console.log('🚀 Starting inventory add request');
+      console.log('📦 Inventory data:', newInventory);
+      console.log('🔑 localStorage keys:', Object.keys(localStorage));
+      console.log('🔐 access_token exists:', !!localStorage.getItem('access_token'));
+      console.log('👤 user in storage:', localStorage.getItem('user'));
+      
       await inventoryAPI.addInventory(newInventory);
       toast.success('Blood inventory added successfully!');
       setOpenAddDialog(false);
@@ -117,14 +126,19 @@ const BloodBankDashboard = () => {
         blood_group: '',
         component_type: 'WHOLE_BLOOD',
         quantity: 1,
+        unit_volume: 450,
         collection_date: new Date().toISOString().split('T')[0],
+        expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         storage_temperature: 4,
         storage_location: '',
         donor: '',
+        status: 'AVAILABLE',
       });
       fetchInventory();
     } catch (error) {
-      toast.error('Failed to add inventory');
+      console.error('Error adding inventory:', error);
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to add inventory';
+      toast.error(`Error: ${errorMsg}`);
     }
   };
 
@@ -482,6 +496,17 @@ const BloodBankDashboard = () => {
                 type="date"
                 value={newInventory.collection_date}
                 onChange={(e) => setNewInventory({ ...newInventory, collection_date: e.target.value })}
+                required
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Expiry Date"
+                type="date"
+                value={newInventory.expiry_date}
+                onChange={(e) => setNewInventory({ ...newInventory, expiry_date: e.target.value })}
                 required
                 InputLabelProps={{ shrink: true }}
               />

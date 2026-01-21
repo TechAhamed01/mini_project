@@ -5,14 +5,18 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.contrib.auth import get_user_model
 from .models import BloodType, BloodRequest
 from .serializers import (
     BloodTypeSerializer, BloodRequestSerializer, BloodRequestCreateSerializer
 )
 from ai_engine.models import BloodSupplyChainAI
 from notifications.models import Notification
+
+User = get_user_model()
 
 class BloodInventoryView(generics.ListCreateAPIView):
     serializer_class = BloodTypeSerializer
@@ -33,10 +37,21 @@ class BloodInventoryView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         user = self.request.user
-        if user.user_type not in ['BLOOD_BANK', 'HOSPITAL']:
-            raise PermissionDenied("Only blood banks and hospitals with blood banks can add inventory")
         
-        serializer.save(blood_bank=user)
+        # Debug logging
+        print(f"DEBUG: User attempting to add inventory - Username: {user.username}, User Type: {user.user_type}")
+        
+        # Check if user is authorized to add inventory
+        if user.user_type == 'BLOOD_BANK':
+            print(f"DEBUG: User is BLOOD_BANK, proceeding with save")
+            serializer.save(blood_bank=user)
+        elif user.user_type == 'HOSPITAL' and user.has_blood_bank:
+            print(f"DEBUG: User is HOSPITAL with blood bank, proceeding with save")
+            serializer.save(blood_bank=user)
+        else:
+            error_msg = f"User {user.username} (type: {user.user_type}) is not authorized to add inventory"
+            print(f"DEBUG: Permission Denied - {error_msg}")
+            raise PermissionDenied(error_msg)
 
 class BloodSearchView(APIView):
     permission_classes = [permissions.IsAuthenticated]

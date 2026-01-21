@@ -37,12 +37,26 @@ const DonorDashboard = () => {
   const [donations, setDonations] = useState([]);
   const [healthInfo, setHealthInfo] = useState(null);
   const [upcomingRequests, setUpcomingRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchDonations();
-    fetchHealthInfo();
-    fetchUpcomingRequests();
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          fetchDashboardData(),
+          fetchDonations(),
+          fetchHealthInfo(),
+          fetchUpcomingRequests()
+        ]);
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDashboardData();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -100,6 +114,14 @@ const DonorDashboard = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      {loading && (
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="body1" color="textSecondary">
+            Loading dashboard data...
+          </Typography>
+          <LinearProgress sx={{ mt: 2 }} />
+        </Paper>
+      )}
       {/* Welcome Section */}
       <Paper sx={{ p: 3, mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
         <Grid container alignItems="center" justifyContent="space-between">
